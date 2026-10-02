@@ -1,14 +1,33 @@
-# astrbot-plugin-helloworld
+# astrbot_plugin_reverse1999
 
-AstrBot 插件模板 / A template plugin for AstrBot plugin feature
+一个面向《重返未来：1999》的 AstrBot 玩家数据、Box 展示、抽卡统计与攻略辅助插件。
 
-> [!NOTE]
-> This repo is just a template of [AstrBot](https://github.com/AstrBotDevs/AstrBot) Plugin.
-> 
-> [AstrBot](https://github.com/AstrBotDevs/AstrBot) is an agentic assistant for both personal and group conversations. It can be deployed across dozens of mainstream instant messaging platforms, including QQ, Telegram, Feishu, DingTalk, Slack, LINE, Discord, Matrix, etc. In addition, it provides a reliable and extensible conversational AI infrastructure for individuals, developers, and teams. Whether you need a personal AI companion, an intelligent customer support agent, an automation assistant, or an enterprise knowledge base, AstrBot enables you to quickly build AI applications directly within your existing messaging workflows.
+> 项目目前处于早期开发阶段，部分功能仍在设计与实现中。
+***由于作者具体代码知识储备知识不足，目前具体代码由ai生成，本人暂只负责整体架构的规划，但也仍在积极学习并定期回头查错。
 
-# Supports
+---
 
-- [AstrBot Repo](https://github.com/AstrBotDevs/AstrBot)
-- [AstrBot Plugin Development Docs (Chinese)](https://docs.astrbot.app/dev/star/plugin-new.html)
-- [AstrBot Plugin Development Docs (English)](https://docs.astrbot.app/en/dev/star/plugin-new.html)
+## 项目简介
+
+`astrbot_plugin_reverse1999` 计划为《重返未来：1999》玩家提供账号数据查询、角色 Box 展示、抽卡统计、攻略查询以及基于大模型的个性化养成建议等功能。
+
+项目当前首先以 AstrBot 插件形式开发，后续计划逐步抽离可复用核心模块，为网页、微信小程序及其他客户端提供支持。
+
+---
+
+## 当前开发状态
+
+当前版本：`0.1.0`
+
+目前已经完成：
+
+- AstrBot 插件基础框架搭建
+- 插件 metadata 配置
+- AstrBot 本地加载测试
+- QQ 私聊 / 群聊指令测试
+- `/1999测试` 测试指令
+
+当前测试指令：
+
+```text
+/1999测试
