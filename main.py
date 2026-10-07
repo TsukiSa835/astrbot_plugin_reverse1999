@@ -2,10 +2,15 @@ from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star
 from astrbot.api import logger
 
+from .data_sources.mock import MockBoxDataSource
+from .services.box_service import BoxService
+
 
 class Reverse1999Plugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
+        data_source = MockBoxDataSource()
+        self._box_service = BoxService(data_source)
 
     async def initialize(self):
         logger.info("[R1999] Reverse1999 插件初始化成功")
@@ -14,6 +19,20 @@ class Reverse1999Plugin(Star):
     async def test(self, event: AstrMessageEvent):
         """测试 Reverse1999 插件是否正常加载。"""
         yield event.plain_result("Reverse1999 插件已正常加载。")
+
+    @filter.command("1999box")
+    async def box(self, event: AstrMessageEvent, player_id: str = "mock-player"):
+        """展示模拟角色 Box，可指定玩家标识。"""
+        box = await self._box_service.get_box(player_id)
+        if box is None:
+            yield event.plain_result(f"未找到模拟玩家：{player_id}。")
+            return
+        lines = ["重返未来：1999 Box（模拟数据）", f"玩家：{box.player_id}"]
+        for character in box.characters:
+            lines.append(f"{character.name}：等级 {character.level}")
+        if not box.characters:
+            lines.append("暂无角色。")
+        yield event.plain_result("\n".join(lines))
 
     async def terminate(self):
         """插件关闭或卸载时调用。"""
