@@ -1,128 +1,158 @@
-# 静态图片索引：第一步
+# 静态图鉴与模拟映射规范
 
-这一层保存大家共用的角色资料和静态图片索引。它不保存玩家拥有谁、穿什么皮肤、角色练到多少级；这些仍然属于 PlayerBox。
+状态：离线导入工具、SQLite 只读查询和模拟映射已实现；尚未接入 Bot 的 Box 指令。图鉴保存公共角色资料，玩家的拥有状态、养成与当前装扮由 `PlayerBox` 表示。
 
-## 文件与依赖方向
+## 数据结构与查询接口
 
-| 文件 | 负责什么 | 设计原因 |
-| --- | --- | --- |
-| `domain/models.py` | CharacterInfo 新增 afflatus | 灵感是角色基础资料，允许多种灵感和未知状态 |
-| `domain/catalog.py` | 图鉴角色、皮肤和静态图片的数据结构 | 只描述业务数据，不知道 QQ、SQLite 和 D 盘 |
-| `domain/ports.py` | CharacterCatalog 查询约定 | 以后业务依赖约定，可以替换存储实现 |
-| `storage/sqlite_catalog.py` | 用 SQLite 实现查询约定 | SQL、线程和连接管理都留在外层 |
-| `tools/build_catalog.py` | 离线导入资料、检查图片、记录来源 | 外部 JSON 字段最容易变，把转换逻辑集中到这里 |
-| `tests/test_catalog.py` | 导入失败、重复导入、角色归属等回归测试 | 这些边界不能只靠一次成功导入判断 |
+模型与模块依赖见[架构说明](architecture.md)。当前数据库结构版本为 `1`。
 
-依赖方向：导入工具/存储实现 → domain；以后 Box 渲染服务 → CharacterCatalog 约定。domain 不反过来导入数据库或插件入口。
+| 表 | 内容 |
+| --- | --- |
+| `characters` | 角色 ID、名称、英文名、稀有度、灵感、默认皮肤 ID，以及原始映射和属性记录 |
+| `skins` | 皮肤 ID、所属角色、名称、描述及原始皮肤映射 |
+| `images` | `(skin_id, kind)` 主键、资源相对路径、尺寸、SHA-256 |
+| `catalog_meta` | 结构版本、来源记录、导入时间、完整检查报告 |
 
-这次没有接入 `/1999box` 的图片发送。已有模拟 Box 使用 mock-a 等测试 ID，不能偷偷替换成真实角色。下一步可以在单独的渲染测试中用真实图鉴 ID，再将渲染结果接到 Box。
+[CharacterCatalog](../domain/ports.py) 提供三个异步查询：
 
-## 先看模型中的几行
+- `get_character(character_id)`：查询公共角色资料。
+- `get_skin(character_id, skin_id)`：查询指定角色所属的皮肤。
+- `get_image(character_id, skin_id, kind="portrait")`：查询指定用途的静态图片。
 
-```python
-afflatus: tuple[str, ...] | None = None
-```
+[SQLiteCatalog](../storage/sqlite_catalog.py) 使用参数化 SQL，通过角色归属检查防止串用皮肤。连接以 `mode=ro` 打开；数据库不存在或无法打开时抛出异常，匹配记录不存在才返回 `None`。同步查询通过 `asyncio.to_thread` 执行，每次独立打开并关闭连接。
 
-- `afflatus` 表示灵感。
-- `tuple[str, ...]` 表示多个字符串组成的不可变序列，如 `("木",)` 或 `("星", "岩")`。
-- `| None` 表示允许“没有获取到”，不能用空字符串伪装成已知数据。
-- `= None` 提供默认值，因此旧的 mock 角色构造方式仍然有效。
+路径相对于资源根目录，例如 `singlebg/headicon_img/300301.png`。更换部署位置无需修改 domain；资源根目录由使用图片的外层确定。查询不会重新解码或校验文件，运行时错误需由后续渲染流程处理。
 
-`CatalogCharacter.info` 复用现有 CharacterInfo，而不是再定义一套姓名、星级字段。`default_skin_id` 保存能够从资料核对到的默认皮肤；不能核对时是 None。
+## 离线导入
 
-`StaticImage.relative_path` 是例如 `singlebg/headicon_img/300301.png` 的相对路径。它不保存 `D:\...`，换服务器时只需要在使用图片的外层换资源根目录。`width`、`height` 可用于排版；`sha256` 用于识别文件内容版本，不代表每次查询都重新校验文件。
+[build_catalog.py](../tools/build_catalog.py) 不联网，依赖 Python 3.10+ 与 Pillow。输入需预先准备：
 
-`@dataclass(frozen=True)` 为这些记录自动生成初始化方法，并阻止给字段重新赋值。注意嵌套的旧 CharacterInfo 本身仍是可变对象，这不是深度不可变。
+| 参数 | 内容 |
+| --- | --- |
+| `--root` | 素材根目录，包含 `mappings/ArcanistMap.json` 与图片目录 |
+| `--attributes` | 以角色 ID 字符串为键的属性表；记录包含 `id`、`name.zh`、`name.en`、`rarity`、`career` |
+| `--roster` | 补充图鉴数组，以 `baseId` 标识角色，读取 `rarity` 和 `defaultVariant` |
+| `--provenance` | 来源记录；`mapping`、`attributes`、`roster` 项须包含对应文件的 `sha256`，并应保留 URL、提交号或获取日期 |
+| `--database` | 输出图鉴数据库路径；不得指向绑定库 |
+| `--overrides` | 人工核对规则；命令行默认读取仓库的 `data/catalog_overrides.json` |
 
-## 查询代码的关键逻辑
+素材、属性快照、补充图鉴及来源记录不随仓库分发。克隆项目本身不能重现某次完整导入，必须取得匹配的输入快照；尤其不能将更新后的在线属性表继续标作旧快照。来源记录中的校验值应来自实际输入文件，不应仅为绕过校验而修改。
 
-`asyncio.to_thread(...)` 把同步 SQLite 查询放到线程执行，避免阻塞 Bot 的事件循环。每次查询新建并关闭连接，不把同一 SQLite 连接跨线程共享。
-
-`mode=ro` 以只读方式打开数据库。路径拼错时会报错，不能自动创建一个空库后让人误以为角色不存在。
-
-查询图片同时传 `character_id` 和 `skin_id`。SQL 通过 skins 表确认归属，再返回图片；不能只拿一个皮肤 ID 就假定它属于当前角色。SQL 的 `?` 占位符绑定参数，用户输入不会拼进 SQL 语句。
-
-查不到记录返回 None，表示图鉴中没有匹配记录。数据库本身打不开则抛出异常，两种情况不能混为一谈。
-
-## 导入过程
-
-1. 读取美术映射、角色属性、补充图鉴与来源记录；校验 SHA-256，确认文件与记录的快照一致。
-2. 按角色 ID 合并，绝不按名字模糊配对。属性表有但素材映射没有的角色也入库，并报告缺口。
-3. 稀有度使用数据源已转换好的 2–6 星，不能再加 1。两个来源的稀有度冲突时停止导入。
-4. 在导入边界把 `career` 编号转换为灵感：1 岩、2 星、3 木、4 兽、5 灵、6 智、101 星与岩。未知编号保留原始记录、报告缺口，展示字段暂为空。
-5. 默认皮肤来自映射中的“初始皮肤”标签或补充图鉴的明确默认字段；两个来源冲突时停止。没有证据时不自行取列表第一项。
-6. 按精确 skin ID 查找静态图片，并实际解码检查、读取尺寸和计算校验值。不会把动画图集当成整张立绘，也不自动采用模糊的大背景图。
-7. 所有准备结束后，在一个数据库事务内替换旧图鉴。删除和插入是一体的：任何一步失败，旧数据回滚保留。
-
-`catalog_meta` 保存结构版本、导入时间、来源版本/校验值和完整缺口报告。原始角色映射、属性与皮肤映射也保存，方便排查来源问题。数据库含其他业务表时拒绝导入，防止误指向绑定数据库。
-
-事务保证数据库替换一致，但不会为以后误导入一个合法却错误的快照提供历史版本管理；重要更新前仍应备份旧图鉴。
-
-## 本机文件位置与复现
-
-- 资源根目录：`D:\Reverse1999Assets\sources\Reverse-1999-CN-Asset`
-- 资料快照和来源：`D:\Reverse1999Assets\catalog\character-sources`
-- 图鉴数据库：`D:\Astrbot\data\plugin_data\astrbot_plugin_reverse1999\catalog.sqlite3`
-- 账号绑定库：同目录的 `bindings.sqlite3`，与图鉴分离。
-
-在 PowerShell 中可重复运行：
+以下为仓库根目录下的 PowerShell 示例；将示例资源目录替换为实际位置，`python` 应指向具备 Pillow 的环境：
 
 ```powershell
-& 'D:\Astrbot\.venv\Scripts\python.exe' `
-  'D:\Astrbot\data\plugins\astrbot_plugin_reverse1999\tools\build_catalog.py' `
-  --root 'D:\Reverse1999Assets\sources\Reverse-1999-CN-Asset' `
-  --attributes 'D:\Reverse1999Assets\catalog\character-sources\arcanists.json' `
-  --roster 'D:\Reverse1999Assets\catalog\character-sources\characters.json' `
-  --provenance 'D:\Reverse1999Assets\catalog\character-sources\provenance.json' `
-  --database 'D:\Astrbot\data\plugin_data\astrbot_plugin_reverse1999\catalog.sqlite3'
+python tools/build_catalog.py `
+  --root 'E:/Reverse1999Assets/sources/Reverse-1999-CN-Asset' `
+  --attributes 'E:/Reverse1999Assets/catalog/character-sources/arcanists.json' `
+  --roster 'E:/Reverse1999Assets/catalog/character-sources/characters.json' `
+  --provenance 'E:/Reverse1999Assets/catalog/character-sources/provenance.json' `
+  --database 'E:/Reverse1999Assets/catalog/catalog.sqlite3' `
+  --overrides 'data/catalog_overrides.json'
 ```
 
-工具本身不联网，需要 Python 3.10+ 和 Pillow。本机 AstrBot 环境已安装 Pillow。换机器需一起提供资料快照和资源包；数据库不包含图片二进制。
+Python 直接调用 `build_catalog(...)` 时，`overrides` 默认是 `None`，须显式传入路径才能应用人工规则；这与命令行默认行为不同。
 
-## 来源与范围
+### 转换与校验规则
 
-- 美术映射：[myssal/Reverse-1999-CN-Asset](https://github.com/myssal/Reverse-1999-CN-Asset)，固定提交 `45e75248ba3b25053fd32e63ab13c2f9f54dd9df`。
-- 稀有度和灵感：[improviser1999 使用的角色数据](https://r2.balthild.com/improviser1999/arcanists.json)，来源项目 [balthild/improviser1999](https://github.com/balthild/improviser1999)。该地址会更新，本机保存下载快照、下载时间和 SHA-256；不把项目代码提交号冒充数据版本。
-- 补充默认皮肤及稀有度交叉检查：[UnderLotus/r1999-roster](https://github.com/UnderLotus/r1999-roster)，固定提交 `10f0e88112bcb0286d3ddf2b6a5ef37b70951ef3`。MIT 许可原文保存在资料快照目录 `LICENSE`。
-- 双灵感含义核对：[灰机 Wiki 双生舞伶](https://res1999.huijiwiki.com/wiki/双生舞伶)。
+1. 校验三份资料的 SHA-256；拒绝空角色资料、非法或重复 ID、属性字典键与记录 ID 不一致。
+2. 按角色 ID 合并美术映射与属性表，不按姓名模糊匹配。仅属性表存在的角色也入库，并报告缺少素材映射。
+3. 稀有度使用已转换的 2–6 星，不再加 1；两个来源有明确数值且冲突时终止导入。
+4. `career` 在导入边界转换为灵感元组；未知编号保留原记录、展示字段置空并列入报告。
+5. 默认皮肤取“初始皮肤”标签或补充图鉴的 `defaultVariant`，且必须存在于该角色映射中；来源冲突时终止，缺失时不取列表第一项代替。
+6. 每个皮肤 ID 必须唯一归属一个角色。按精确文件名建立候选，再应用人工图片规则。
+7. 对存在的图片实际解码，检查 PNG 格式、读取尺寸并计算 SHA-256。损坏图不入库，记录原因；路径越出资源根目录则终止。
+8. 完成检查后，在显式事务中建表并替换图鉴记录；数据库写入失败则回滚旧数据。含其他业务表或不支持的结构版本时拒绝写入。
 
-这些是社区资料快照，不是官方实时角色名册。素材中含剧情角色和未知条目，不能把入库条目数称作“当前可抽取角色数”。补充图鉴中的 isReleased 指海外服，不能用于判断国服上线状态，本次不导入该字段。
+| career | 灵感 |
+| --- | --- |
+| 1 | 岩 |
+| 2 | 星 |
+| 3 | 木 |
+| 4 | 兽 |
+| 5 | 灵 |
+| 6 | 智 |
+| 101 | 星、岩 |
 
-本步不加入技能。语音下载仍见 `art-resources-todo.md`；真正渲染时须执行 `image-fallback.md`：当前皮肤 → 同角色默认皮肤 → 占位图，同时给出提示，不能修改玩家实际装备状态。图片入库后仍可能被移动/损坏，渲染端必须再处理读图失败。
+事务防止部分写入，不提供历史快照管理；更新前仍需保存可恢复的旧图鉴与输入版本。
 
-## 2026-10-08 本机导入结果
+## 图片用途
 
-- 139 个角色条目；138 个具备稀有度和灵感；9998 是未核实的未知条目。
-- 424 个皮肤；420 张完整立绘、422 张角色头像、214 张皮肤预览，共 1,056 个图片索引。
-- 已入库图片全部可解码，无损坏图；4 个皮肤没有精确 ID 对应的完整立绘：302902（斯奈德）、30660001（37）、30880001（塞梅尔维斯）、999801（未知角色）。
-- 3029（斯奈德）没有能够核对的默认皮肤标记。缺图不会借用另一个角色的素材。
-- 另有 4 张立绘文件、29 张头像文件没有对应皮肤映射，已列入报告，暂不猜测归属。
-- 查询样例核对：槲寄生为 6 星木，十四行诗为 5 星岩，双生舞伶为 6 星星/岩；都能查到对应默认立绘。
-- 15 项测试通过（8 项图鉴、7 项账号绑定），真实数据库 integrity_check 为 ok，外键检查无错误。这不等于验证了 QQ 图片发送；本步尚未接入该功能。
+| kind | 默认目录或用途 |
+| --- | --- |
+| `portrait` | `singlebg/headicon_img`，默认展示立绘 |
+| `icon` | `singlebg/headicon_middle`；沿用现有接口名称，内容可为 Q 版立绘，不能统一解释为头像 |
+| `skin_preview` | `singlebg/headskinicon_middle`，皮肤预览 |
+| `portrait_variant` | 人工关联的补充立绘 |
+| `portrait_decoration_1`、`portrait_decoration_2` | 人工关联的装饰分件 |
 
-人类可读角色清单：`D:\Reverse1999Assets\catalog\characters.csv`。
-完整缺口报告：`D:\Reverse1999Assets\catalog\static-index-report.json`，同一报告也在数据库中。
-修改前旧模型和接口备份：`D:\Reverse1999Assets\catalog\plugin-backups\20261008-172406`。
+动画图集不能直接当作完整立绘。`headskinicon_large` 中已检查的样例是模糊背景，不作为默认主图来源。文件名不一定等于皮肤 ID；动画目录也不能仅按皮肤 ID 推导，例如皮肤 `300302` 的原映射指向 `300303` 动画目录。
 
-## 2026-10-08 人工辨认后的修正
+## 映射冲突校正
 
-依据用户逐图辨认，规则保存在 `data/catalog_overrides.json`。导入工具命令行默认加载该文件；程序调用 build_catalog 时需传 overrides 路径。原始下载映射不修改，导入记录保存完整核对规则和 SHA-256，重建数据库也不会丢失修正。
+正式规则保存在 [catalog_overrides.json](../data/catalog_overrides.json)，不直接修改下载的原始映射。规则版本为 `1`；完整决策和文件 SHA-256 随来源写入 `catalog_meta`，可随导入复现。
 
-- 诗的礼赞原映射的皮肤 ID 已是 302306。302305.png 与 302306.png 是同服装、主要为视图大小差异：保留 302306 的原展示立绘，增加 `portrait_variant` 指向 302305.png。不能仅凭图片文件名把 302305 当成新的游戏皮肤 ID。用户说明此皮肤可通过实体设定集兑换码获取，已记录来源为用户说明。
-- 恶之果皮肤 310003 按用户最新选择，`portrait` 使用完整组合图 310003.png。310003_1.png、310003_2.png 分别以 `portrait_decoration_1`、`portrait_decoration_2` 关联为补充装饰；310003_3.png 以 `portrait_variant` 关联为人物主体补充图。三者不替代默认展示图，也不新建皮肤。
-- 302902、30660001、30880001、999801 保留皮肤记录，缺图转入 `ignored_missing_portraits`。废案/占位是用户的暂定判断，未经官方核实；以后发现对应图片仍可重新入库，不永久屏蔽。
-- 29 张未映射 headicon_middle 图片按用户辨认分类为 `enemy_chibi`（敌人局内 Q 版立绘），不虚构玩家皮肤关系。其余已映射图片仍沿用旧 kind=icon 标识以保持接口兼容；这个技术名称不代表它们都是头像。
-- 报告中 `unmapped_images` 现在按实际被索引的文件路径统计，且扣除已人工分类的文件；不再通过“文件名等于皮肤 ID”判断是否已处理。
-- 分类与展示不能同时占用同一路径；人工映射必须指向该角色已有皮肤，路径必须位于资源目录内并且文件存在。索引和报告仍在同一数据库事务里保存。
+- `images`：按角色、已有皮肤和用途指定路径；拒绝错误归属、重复用途、未知用途及不存在或越界路径。
+- `classified_images`：记录不归入玩家皮肤的素材用途，同一路径不得重复分类，也不得与显式图片规则冲突。
+- `ignored_missing`：将指定皮肤的主图缺失移入单独报告，不删除皮肤记录、不永久禁止以后补图。
 
-此前的“4 张未映射立绘、29 张未映射头像、4 个待处理缺图”是修正前的历史记录。当前结果以最新数据库报告为准；检查文件夹中的原图片与旧说明保留，另附处理结果说明。
+### 诗的礼赞
 
-前一次修正结果为 1,057 图片索引；下方记录用户再次选择完整组合图后的最新结果。
+角色 `3023`，皮肤 `302306`。保留 `302306.png` 为主图，`302305.png` 以 `portrait_variant` 收录。两图服装一致，主要是视图大小差异，不能因文件名不同重复创建游戏皮肤。
 
-### 最新选择：完整主图与补充图片
+### 恶之果
 
-恶之果完整组合图已恢复为主图，三个分件收录在同一皮肤下。主图与补充图通过 kind 区分，SQLiteCatalog.get_image 默认仍只取 portrait；需要补充图时显式传对应 kind。不修改数据库结构，不将补充装饰视作独立皮肤。
+角色 `3100`，皮肤 `310003`。以下图片均位于 `singlebg/headicon_img`：
 
-完整图和分件都是已有 PNG；目前依据用户的视觉偏好选择完整图，不能据此声称它在所有 Box 布局中兼容性更好。后续实际排版时再检查缩放、裁切及人物清晰度。
+| 文件 | 用途 |
+| --- | --- |
+| `310003.png` | `portrait`：包含人物和两侧装饰的完整组合图 |
+| `310003_1.png` | `portrait_decoration_1`：装饰分件 |
+| `310003_2.png` | `portrait_decoration_2`：装饰分件 |
+| `310003_3.png` | `portrait_variant`：人物主体补充图 |
 
-最新实库验证：139 角色、424 皮肤、1,060 图片索引；仅恶之果主图及3张补充图片记录变化，其余图片和全部角色/皮肤记录与修改前一致。17项测试通过，实际查询、数据库完整性和外键检查通过。
+采用完整组合图以保留构图内容；分件仍关联同一皮肤，不新增皮肤。当前没有完成 Box 排版验证，不能据此断言完整图在所有布局中更清晰或更兼容。
+
+### 暂时忽略的主图缺失
+
+| 角色 ID | 皮肤 ID | 处理依据与限制 |
+| --- | --- | --- |
+| `3029` | `302902` | 斯奈德进阶皮肤，暂按未实装／废弃内容候选处理；原动画映射指向 `302901`，默认皮肤仍未可靠确认 |
+| `3066` | `30660001` | “37 的往日”，暂按未实装／废弃内容候选处理 |
+| `3088` | `30880001` | “塞梅尔维斯的往日”，同上 |
+| `9998` | `999801` | `Machine D III`／未知角色，暂按占位候选处理；原 Spine 指向玛丽莲 `301101_malilian`，不能据此借用图片或确认身份 |
+
+这些是暂定分类，不是官方废案结论。缺少精确同名主图也不代表整个资源包不存在相应形象。未知角色的稀有度和灵感继续为空。
+
+### 敌人 Q 版立绘
+
+29 张原未映射的 `headicon_middle` 图片归类为 `enemy_chibi`，不关联玩家皮肤。逐项文件路径保留在人工规则中，尚未逐项确认敌人名称。其他敌人同类素材的目录与覆盖范围仍待探索，见[美术资源计划](art-resources-todo.md)。
+
+## 报告与异常边界
+
+| 报告字段 | 内容 |
+| --- | --- |
+| `missing_attributes`、`unknown_careers` | 属性缺失或未知灵感编号 |
+| `missing_mapping`、`missing_default` | 美术映射缺失或默认皮肤未确认 |
+| `missing_portraits` | 需继续处理的主图缺失 |
+| `ignored_missing_portraits` | 已暂时忽略的主图缺失及理由 |
+| `invalid_images` | 无法解码或格式不符的图片及错误 |
+| `unmapped_images` | 所扫描目录中未实际入库、且未人工分类的文件 |
+| `classified_images` | 已核对用途的独立素材 |
+
+命令行输出报告，完整报告同时存入 `catalog_meta`。统计依据实际图片路径；补充图已入库后不再计作未映射。损坏图不会假造可用路径。人工映射指定路径不存在会直接终止；普通候选图片不存在则记录缺口。
+
+本工具仅索引列出的静态目录，不扫描整个资源包。未映射数为零不等于全量素材已全部识别。实际图片回退遵循[回退设计](image-fallback.md)，目前尚未实现。
+
+## 数据来源与版本
+
+| 来源 | 固定版本或记录方式 | 用途 |
+| --- | --- | --- |
+| [myssal/Reverse-1999-CN-Asset](https://github.com/myssal/Reverse-1999-CN-Asset) | `45e75248ba3b25053fd32e63ab13c2f9f54dd9df` | 角色／皮肤映射与素材 |
+| [公开 arcanists.json](https://r2.balthild.com/improviser1999/arcanists.json)，项目 [improviser1999](https://github.com/balthild/improviser1999) | 保存实际下载时间与文件 SHA-256；在线地址会更新 | 稀有度和灵感 |
+| [UnderLotus/r1999-roster](https://github.com/UnderLotus/r1999-roster) | `10f0e88112bcb0286d3ddf2b6a5ef37b70951ef3` | 默认皮肤补充、稀有度交叉核对 |
+
+项目代码提交号不能替代远程属性数据的版本。补充图鉴的 `isReleased` 指海外服，不作为国服实装判断，本工具不导入该字段。图鉴未加入技能数据，也不宣称社区快照覆盖当前全部可获取角色。
+
+代码许可见 [LICENSE](../LICENSE)。`r1999-roster` 采用 MIT 许可，已有资料快照保留其 LICENSE；其他第三方资料与游戏资源应分别核对适用条款，不因导入图鉴而转为本项目代码许可。
+
+[图鉴测试](../tests/test_catalog.py) 覆盖重复导入、查询归属、双灵感与未知状态、损坏图、输入校验、事务回滚、人工映射和忽略条目。具体历史导入规模与验证记录见[开发记录](development-log.md)。
