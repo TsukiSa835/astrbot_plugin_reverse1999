@@ -1,0 +1,211 @@
+{
+  "version": 1,
+  "reviewed_at": "2026-10-08",
+  "source": "用户逐图辨认；暂时忽略的原因是用户推测，不作为官方废案结论。",
+  "images": [
+    {
+      "character_id": "3023",
+      "skin_id": "302306",
+      "kind": "portrait_variant",
+      "path": "singlebg/headicon_img/302305.png",
+      "note": "用户确认诗的礼赞；与302306.png几乎相同，主要是视图大小差异，作为补充立绘，不新增皮肤ID。用户说明获取方式为购买实体设定集兑换码。"
+    },
+    {
+      "character_id": "3100",
+      "skin_id": "310003",
+      "kind": "portrait",
+      "path": "singlebg/headicon_img/310003.png",
+      "note": "用户选择包含人物与两侧装饰的完整构图作为主立绘。尚未做Box实际排版兼容性验证。"
+    },
+    {
+      "character_id": "3100",
+      "skin_id": "310003",
+      "kind": "portrait_decoration_1",
+      "path": "singlebg/headicon_img/310003_1.png",
+      "note": "用户确认恶之果背景装饰分件1；关联同一皮肤，仅作为补充图片，不作为默认展示图。"
+    },
+    {
+      "character_id": "3100",
+      "skin_id": "310003",
+      "kind": "portrait_decoration_2",
+      "path": "singlebg/headicon_img/310003_2.png",
+      "note": "用户确认恶之果背景装饰分件2；关联同一皮肤，仅作为补充图片，不作为默认展示图。"
+    },
+    {
+      "character_id": "3100",
+      "skin_id": "310003",
+      "kind": "portrait_variant",
+      "path": "singlebg/headicon_img/310003_3.png",
+      "note": "用户确认恶之果人物主体补充立绘；关联同一皮肤，仅作为补充图片，不作为默认展示图。"
+    }
+  ],
+  "ignored_missing": [
+    {
+      "character_id": "3029",
+      "skin_id": "302902",
+      "reason": "用户认为斯奈德可能是未实装/废案，暂忽略此进阶皮肤缺图。"
+    },
+    {
+      "character_id": "3066",
+      "skin_id": "30660001",
+      "reason": "用户认为往日皮肤可能是废案，暂忽略。"
+    },
+    {
+      "character_id": "3088",
+      "skin_id": "30880001",
+      "reason": "用户认为往日皮肤可能是废案，暂忽略。"
+    },
+    {
+      "character_id": "9998",
+      "skin_id": "999801",
+      "reason": "暂无身份信息，用户暂按占位条目处理；不借用玛丽莲图片。"
+    }
+  ],
+  "classified_images": [
+    {
+      "path": "singlebg/headicon_middle/410101.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/412501.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/412701.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/413101.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/420201.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/420301.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/610202.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/610209.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/610211.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/610301.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/6103011.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/611301.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/620128.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/620204.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/620303.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/620312.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/630207.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/630210.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/630212.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/630219.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/630301.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/640122.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/640132.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/640204.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/640215.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/650201.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/670105.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/670129.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    },
+    {
+      "path": "singlebg/headicon_middle/670301.png",
+      "category": "enemy_chibi",
+      "note": "用户确认敌人局内Q版立绘；具体敌人身份尚未逐项标注。"
+    }
+  ]
+}

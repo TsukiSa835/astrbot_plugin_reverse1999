@@ -10,4 +10,8 @@ class BoxService:
 
     async def get_box(self, player_id: str) -> PlayerBox | None:
         """返回玩家 Box；玩家不存在时返回 None。"""
-        return await self._data_source.get_box(player_id)
+        box = await self._data_source.get_box(player_id)
+        if box is None:
+            return None
+        characters = sorted(box.characters, key=lambda character: character.is_favorite is not True)
+        return PlayerBox(player_id=box.player_id, characters=characters)
