@@ -1,0 +1,61 @@
+{
+  "project_version": "0.8.0",
+  "verified_on": "2026-10-19",
+  "player_snapshot_time": "2026-10-18T06:48:50.829325+00:00",
+  "scope": "Independent developer environment, not a QQ production integration",
+  "configuration_revision": "44588969ffe317e7a4d84a5a8d2106e66137c052",
+  "asset_revision": "45e75248ba3b25053fd32e63ab13c2f9f54dd9df",
+  "sample_counts": {
+    "heroes": 84,
+    "warehouse_records": 672,
+    "six_star_heroes": 25,
+    "six_star_psychube_types": 22
+  },
+  "tests": {
+    "repository_historical": 17,
+    "independent_box_data": 29
+  },
+  "image_sha256": "918d0a4fdc39d91da707485d3ff9e66636ff8b99a7ba635e2ac2e5a62b60c852",
+  "render_checks": {
+    "broken_images": [],
+    "six_heroes": 25,
+    "six_psychubes": 22,
+    "mobile": {
+      "width": 540,
+      "scroll": 540
+    },
+    "length_tests": [
+      {
+        "n": 0,
+        "height": 2376,
+        "top": 407,
+        "bottom": 385,
+        "extra": 704,
+        "contentEnd": 2000,
+        "bottomStart": 1991
+      },
+      {
+        "n": 1,
+        "height": 2888,
+        "top": 407,
+        "bottom": 385,
+        "extra": 1216,
+        "contentEnd": 2512,
+        "bottomStart": 2503
+      },
+      {
+        "n": 3,
+        "height": 3976,
+        "top": 407,
+        "bottom": 385,
+        "extra": 2304,
+        "contentEnd": 3600,
+        "bottomStart": 3591
+      }
+    ]
+  },
+  "production_integrated": false,
+  "long_term_auth_verified": false,
+  "channel_server_verified": false,
+  "note": "No account UID, nickname, credentials, network trace or real motto exported in this summary."
+}
